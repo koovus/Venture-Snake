@@ -453,18 +453,18 @@ export default function Game() {
     >
       {/* Header */}
       <div className="mb-5 text-center">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: "#2D3748" }}>
-            <TrendingUp className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-center gap-3 mb-1.5">
+          <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ background: "#2D3748" }}>
+            <TrendingUp className="w-5 h-5 text-white" />
           </div>
           <h1
-            className="text-2xl font-bold tracking-tight"
+            className="text-4xl font-bold tracking-tight"
             style={{ fontFamily: "Poppins, Inter, sans-serif", color: "#2D3748" }}
           >
             VC Snake
           </h1>
         </div>
-        <p className="text-sm" style={{ color: "#718096", fontFamily: "Inter, sans-serif" }}>
+        <p className="text-base" style={{ color: "#718096", fontFamily: "Inter, sans-serif" }}>
           Grow your portfolio. Acquire startups. Become a unicorn factory.
         </p>
       </div>
