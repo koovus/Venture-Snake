@@ -13,6 +13,7 @@ Classic snake gameplay where your VC firm grows by acquiring startups instead of
 - **Startup tiers** — Seed ($5M), Series A ($10M), Series B ($20M), Unicorn ($50M)
 - **Portfolio tracking** — Live sidebar shows acquired companies with tier badges
 - **Fund breakdown** — Visual breakdown of portfolio by tier with progress bars
+- **Leaderboard** — Persistent top-10 leaderboard stored in PostgreSQL, submit scores on game over
 - **High score** — Persisted in localStorage across sessions
 - **Deal flow levels** — Speed increases as portfolio value grows
 - **Acquisition toasts** — Animated notification when a startup is acquired
@@ -21,7 +22,8 @@ Classic snake gameplay where your VC firm grows by acquiring startups instead of
 ## Stack
 
 - **Frontend**: React + TypeScript, HTML5 Canvas, Tailwind CSS, shadcn/ui
-- **Backend**: Express.js (minimal, no database needed for this game)
+- **Backend**: Express.js with PostgreSQL (Neon) for leaderboard persistence
+- **Database**: `leaderboard` table (id, player_name, score, startups, unicorns, created_at)
 - **Routing**: wouter
 - **Fonts**: Poppins, Inter (from Google Fonts)
 
