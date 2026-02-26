@@ -151,9 +151,25 @@ function getSpeed(score: number): number {
   return Math.max(80, 250 - (level - 1) * 20);
 }
 
+function useCanvasScale() {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const calc = () => {
+      const maxW = window.innerWidth - 32;
+      setScale(maxW < CANVAS_WIDTH ? maxW / CANVAS_WIDTH : 1);
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+  return scale;
+}
+
 export default function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameData>(createGameData());
+  const canvasScale = useCanvasScale();
+  const touchRef = useRef<{ x: number; y: number } | null>(null);
 
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [score, setScore] = useState(0);
@@ -452,6 +468,43 @@ export default function Game() {
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touchRef.current = { x: t.clientX, y: t.clientY };
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchRef.current) e.preventDefault();
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!touchRef.current) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchRef.current.x;
+      const dy = t.clientY - touchRef.current.y;
+      touchRef.current = null;
+      const minSwipe = 20;
+      if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) return;
+      e.preventDefault();
+      let dir: Direction;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        dir = dx > 0 ? "RIGHT" : "LEFT";
+      } else {
+        dir = dy > 0 ? "DOWN" : "UP";
+      }
+      handleMobileDir(dir);
+    };
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd, { passive: false });
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
+
   // Draw idle screen on mount
   useEffect(() => {
     drawFrame();
@@ -479,65 +532,65 @@ export default function Game() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center py-6 px-4"
+      className="min-h-screen flex flex-col items-center justify-start lg:justify-center py-4 sm:py-6 px-4"
       style={{ background: "linear-gradient(135deg, #EBF4FF 0%, #F7FAFC 50%, #E6FFFA 100%)" }}
     >
       {/* Header */}
-      <div className="mb-5 text-center">
-        <div className="flex items-center justify-center gap-3 mb-1.5">
-          <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ background: "#2D3748" }}>
-            <TrendingUp className="w-5 h-5 text-white" />
+      <div className="mb-3 sm:mb-5 text-center">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-1">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-md flex items-center justify-center" style={{ background: "#2D3748" }}>
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <h1
-            className="text-4xl font-bold tracking-tight"
+            className="text-2xl sm:text-4xl font-bold tracking-tight"
             style={{ fontFamily: "Poppins, Inter, sans-serif", color: "#2D3748" }}
           >
             VC Snake
           </h1>
         </div>
-        <p className="text-base" style={{ color: "#718096", fontFamily: "Inter, sans-serif" }}>
+        <p className="text-sm sm:text-base" style={{ color: "#718096", fontFamily: "Inter, sans-serif" }}>
           Grow your portfolio. Acquire startups. Become a unicorn factory.
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-5 items-start justify-center w-full max-w-5xl">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start justify-center w-full max-w-5xl">
         {/* Game Area */}
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-2 sm:gap-3 w-full lg:w-auto">
           {/* HUD */}
-          <div className="flex gap-3 w-full">
-            <Card className="flex-1 px-4 py-2.5 flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#4299E1" }}>
-                <TrendingUp className="w-3.5 h-3.5 text-white" />
+          <div className="flex gap-2 sm:gap-3 w-full" style={{ maxWidth: CANVAS_WIDTH * canvasScale }}>
+            <Card className="flex-1 px-2 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2.5">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#4299E1" }}>
+                <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
               </div>
-              <div>
-                <p className="text-xs font-medium" style={{ color: "#718096" }}>Portfolio Value</p>
-                <p className="text-lg font-bold leading-tight" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-medium truncate" style={{ color: "#718096" }}>Portfolio</p>
+                <p className="text-sm sm:text-lg font-bold leading-tight" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}
                   data-testid="text-score"
                 >
                   ${score}M
                 </p>
               </div>
             </Card>
-            <Card className="flex-1 px-4 py-2.5 flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#48BB78" }}>
-                <Zap className="w-3.5 h-3.5 text-white" />
+            <Card className="flex-1 px-2 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2.5">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#48BB78" }}>
+                <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
               </div>
-              <div>
-                <p className="text-xs font-medium" style={{ color: "#718096" }}>Deal Flow</p>
-                <p className="text-lg font-bold leading-tight" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-medium truncate" style={{ color: "#718096" }}>Deal Flow</p>
+                <p className="text-sm sm:text-lg font-bold leading-tight" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}
                   data-testid="text-level"
                 >
-                  Level {level}
+                  Lvl {level}
                 </p>
               </div>
             </Card>
-            <Card className="flex-1 px-4 py-2.5 flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#ECC94B" }}>
-                <Trophy className="w-3.5 h-3.5" style={{ color: "#2D3748" }} />
+            <Card className="flex-1 px-2 sm:px-4 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2.5">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#ECC94B" }}>
+                <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: "#2D3748" }} />
               </div>
-              <div>
-                <p className="text-xs font-medium" style={{ color: "#718096" }}>Best</p>
-                <p className="text-lg font-bold leading-tight" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-medium truncate" style={{ color: "#718096" }}>Best</p>
+                <p className="text-sm sm:text-lg font-bold leading-tight" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}
                   data-testid="text-highscore"
                 >
                   ${highScore}M
@@ -546,8 +599,21 @@ export default function Game() {
             </Card>
           </div>
 
-          {/* Canvas */}
-          <div className="relative" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
+          {/* Canvas wrapper — scales down on small screens */}
+          <div
+            className="relative overflow-hidden"
+            style={{
+              width: CANVAS_WIDTH * canvasScale,
+              height: CANVAS_HEIGHT * canvasScale,
+              touchAction: "none",
+            }}
+          >
+            <div style={{
+              transform: `scale(${canvasScale})`,
+              transformOrigin: "top left",
+              width: CANVAS_WIDTH,
+              height: CANVAS_HEIGHT,
+            }}>
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
@@ -558,6 +624,7 @@ export default function Game() {
                 border: "2px solid rgba(45,55,72,0.12)",
                 boxShadow: "0 8px 32px rgba(45,55,72,0.12)",
                 display: "block",
+                touchAction: "none",
               }}
             />
 
@@ -700,24 +767,48 @@ export default function Game() {
                 Acquired: {lastAcquired}
               </div>
             )}
+            </div>
           </div>
 
           {/* Mobile controls */}
-          <div className="flex flex-col items-center gap-1 lg:hidden">
-            <Button size="icon" variant="outline" onPointerDown={() => handleMobileDir("UP")} data-testid="button-dir-up">
-              <ChevronUp className="w-5 h-5" />
+          <div className="flex flex-col items-center gap-1.5 lg:hidden">
+            <Button
+              className="w-14 h-14 rounded-xl"
+              variant="outline"
+              onPointerDown={() => handleMobileDir("UP")}
+              data-testid="button-dir-up"
+            >
+              <ChevronUp className="w-7 h-7" />
             </Button>
-            <div className="flex gap-1">
-              <Button size="icon" variant="outline" onPointerDown={() => handleMobileDir("LEFT")} data-testid="button-dir-left">
-                <ChevronLeft className="w-5 h-5" />
+            <div className="flex gap-1.5">
+              <Button
+                className="w-14 h-14 rounded-xl"
+                variant="outline"
+                onPointerDown={() => handleMobileDir("LEFT")}
+                data-testid="button-dir-left"
+              >
+                <ChevronLeft className="w-7 h-7" />
               </Button>
-              <Button size="icon" variant="outline" onPointerDown={() => handleMobileDir("DOWN")} data-testid="button-dir-down">
-                <ChevronDown className="w-5 h-5" />
+              <Button
+                className="w-14 h-14 rounded-xl"
+                variant="outline"
+                onPointerDown={() => handleMobileDir("DOWN")}
+                data-testid="button-dir-down"
+              >
+                <ChevronDown className="w-7 h-7" />
               </Button>
-              <Button size="icon" variant="outline" onPointerDown={() => handleMobileDir("RIGHT")} data-testid="button-dir-right">
-                <ChevronRight className="w-5 h-5" />
+              <Button
+                className="w-14 h-14 rounded-xl"
+                variant="outline"
+                onPointerDown={() => handleMobileDir("RIGHT")}
+                data-testid="button-dir-right"
+              >
+                <ChevronRight className="w-7 h-7" />
               </Button>
             </div>
+            <p className="text-xs mt-1" style={{ color: "#A0AEC0", fontFamily: "Inter, sans-serif" }}>
+              Swipe on canvas or use buttons
+            </p>
           </div>
 
           <p className="text-xs hidden lg:block" style={{ color: "#A0AEC0", fontFamily: "Inter, sans-serif" }}>
@@ -726,7 +817,7 @@ export default function Game() {
         </div>
 
         {/* Right sidebar */}
-        <div className="flex flex-col gap-3 w-full lg:w-72">
+        <div className="flex flex-col gap-3 w-full lg:w-72 lg:max-w-72">
           {/* Tier legend */}
           <Card className="p-4">
             <h3 className="text-sm font-semibold mb-3" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}>
