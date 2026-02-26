@@ -2,12 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { TrendingUp, Zap, Star, RefreshCw, Play, Trophy, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Crown, Send } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
-import type { LeaderboardEntry } from "@shared/schema";
+import { TrendingUp, Zap, Star, RefreshCw, Play, Trophy, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CELL_SIZE = 24;
 const GRID_COLS = 25;
@@ -180,31 +175,6 @@ export default function Game() {
     parseInt(localStorage.getItem("vc-snake-highscore") || "0")
   );
   const acquiredTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem("vc-snake-name") || "");
-  const [scoreSubmitted, setScoreSubmitted] = useState(false);
-
-  const { data: leaderboardData = [] } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard"],
-  });
-
-  const submitScoreMutation = useMutation({
-    mutationFn: async (data: { playerName: string; score: number; startups: number; unicorns: number }) => {
-      const res = await apiRequest("POST", "/api/leaderboard", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
-      setScoreSubmitted(true);
-    },
-  });
-
-  const handleSubmitScore = () => {
-    const name = playerName.trim();
-    if (!name || score <= 0 || scoreSubmitted) return;
-    localStorage.setItem("vc-snake-name", name);
-    const unicornCount = portfolio.filter(p => p.tier === "unicorn").length;
-    submitScoreMutation.mutate({ playerName: name, score, startups: portfolio.length, unicorns: unicornCount });
-  };
 
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
@@ -439,7 +409,6 @@ export default function Game() {
     setPortfolio([]);
     setLevel(1);
     setLastAcquired(null);
-    setScoreSubmitted(false);
 
     drawFrame();
     gameRef.current.animFrame = requestAnimationFrame(gameTick);
@@ -711,34 +680,6 @@ export default function Game() {
                     </div>
                   </div>
 
-                  {score > 0 && !scoreSubmitted && (
-                    <div className="flex gap-2 mb-3">
-                      <Input
-                        value={playerName}
-                        onChange={(e) => setPlayerName(e.target.value)}
-                        placeholder="Your fund name..."
-                        data-testid="input-player-name"
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSubmitScore(); e.stopPropagation(); }}
-                        className="text-sm"
-                        style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}
-                      />
-                      <Button
-                        onClick={handleSubmitScore}
-                        disabled={!playerName.trim() || submitScoreMutation.isPending}
-                        data-testid="button-submit-score"
-                        size="icon"
-                        style={{ background: "#48BB78", color: "white", flexShrink: 0 }}
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                  {scoreSubmitted && (
-                    <p className="text-xs mb-3 font-medium" style={{ color: "#48BB78" }}>
-                      Score submitted to the leaderboard!
-                    </p>
-                  )}
-
                   <Button
                     onClick={startGame}
                     data-testid="button-restart-game"
@@ -933,52 +874,6 @@ export default function Game() {
             </Card>
           )}
 
-          {/* Leaderboard */}
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Crown className="w-4 h-4" style={{ color: "#ECC94B" }} />
-              <h3 className="text-sm font-semibold" style={{ color: "#2D3748", fontFamily: "Poppins, sans-serif" }}>
-                Top VCs
-              </h3>
-            </div>
-            {leaderboardData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ background: "#FEFCBF" }}>
-                  <Trophy className="w-5 h-5" style={{ color: "#ECC94B" }} />
-                </div>
-                <p className="text-sm font-medium" style={{ color: "#718096" }}>No scores yet</p>
-                <p className="text-xs mt-1" style={{ color: "#A0AEC0" }}>Be the first to make the board</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1" data-testid="leaderboard-list">
-                {leaderboardData.slice(0, 10).map((entry, i) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center gap-2 rounded-md px-2.5 py-2"
-                    style={{
-                      background: i === 0 ? "rgba(236,201,75,0.1)" : i === 1 ? "rgba(160,174,192,0.08)" : i === 2 ? "rgba(237,137,54,0.08)" : "transparent",
-                      border: i < 3 ? `1px solid ${i === 0 ? "rgba(236,201,75,0.2)" : i === 1 ? "rgba(160,174,192,0.15)" : "rgba(237,137,54,0.15)"}` : "1px solid transparent",
-                    }}
-                    data-testid={`leaderboard-entry-${i}`}
-                  >
-                    <span
-                      className="text-xs font-bold w-5 text-center flex-shrink-0"
-                      style={{ color: i === 0 ? "#ECC94B" : i === 1 ? "#A0AEC0" : i === 2 ? "#ED8936" : "#718096" }}
-                    >
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate" style={{ color: "#2D3748" }}>{entry.playerName}</p>
-                      <p className="text-xs" style={{ color: "#A0AEC0" }}>
-                        {entry.startups} startups{entry.unicorns > 0 ? ` · ${entry.unicorns} unicorns` : ""}
-                      </p>
-                    </div>
-                    <span className="text-xs font-bold flex-shrink-0" style={{ color: "#48BB78" }}>${entry.score}M</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
       </div>
 
